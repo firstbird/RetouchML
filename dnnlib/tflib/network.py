@@ -22,6 +22,7 @@ from .. import util
 
 from .tfutil import TfExpression, TfExpressionEx
 
+tf.compat.v1.disable_eager_execution()
 _import_handlers = []  # Custom import handlers for dealing with legacy data in pickle import.
 _import_module_src = dict()  # Source code for temporary modules created during pickle import.
 
@@ -137,8 +138,8 @@ class Network:
         if self.name is None:
             self.name = self._build_func_name
         assert re.match("^[A-Za-z0-9_.\\-]*$", self.name)
-        with tf.name_scope(None):
-            self.scope = tf.get_default_graph().unique_name(self.name, mark_as_used=True)
+        with tf.name_scope(self.name):
+            self.scope = tf.compat.v1.get_default_graph().unique_name(self.name, mark_as_used=True)
 
         # Finalize build func kwargs.
         build_kwargs = dict(self.static_kwargs)
@@ -147,10 +148,11 @@ class Network:
 
         # Build template graph.
         with tfutil.absolute_variable_scope(self.scope, reuse=False), tfutil.absolute_name_scope(self.scope):  # ignore surrounding scopes
-            assert tf.get_variable_scope().name == self.scope
-            assert tf.get_default_graph().get_name_scope() == self.scope
+            assert tf.compat.v1.get_variable_scope().name == self.scope
+            #assert tf.compat.v1.get_default_graph().get_name_scope() == self.scope
             with tf.control_dependencies(None):  # ignore surrounding control dependencies
-                self.input_templates = [tf.placeholder(tf.float32, name=name) for name in self.input_names]
+                self.input_templates = [tf.compat.v1.placeholder(tf.float32, name=name) for name in self.input_names]
+                print(f"build func: {self._build_func}")
                 out_expr = self._build_func(*self.input_templates, **build_kwargs)
 
         # Collect outputs.
@@ -209,7 +211,7 @@ class Network:
 
         # Build TensorFlow graph to evaluate the network.
         with tfutil.absolute_variable_scope(self.scope, reuse=True), tf.name_scope(self.name):
-            assert tf.get_variable_scope().name == self.scope
+            assert tf.compat.v1.get_variable_scope().name == self.scope
             valid_inputs = [expr for expr in in_expr if expr is not None]
             final_inputs = []
             for expr, name, shape in zip(in_expr, self.input_names, self.input_shapes):
@@ -406,7 +408,7 @@ class Network:
                         in_split = list(zip(*[tf.split(x, num_gpus) for x in in_expr]))
                 else:
                     with tf.device("/cpu:0"):
-                        in_expr = [tf.placeholder(tf.float32, name=name) for name in self.input_names]
+                        in_expr = [tf.compat.v1.placeholder(tf.float32, name=name) for name in self.input_names]
                         in_split = list(zip(*[tf.split(x, num_gpus) for x in in_expr]))
 
                 out_split = []
@@ -446,7 +448,7 @@ class Network:
             mb_end = min(mb_begin + minibatch_size, num_items)
             mb_num = mb_end - mb_begin
             mb_in = [src[mb_begin : mb_end] if src is not None else np.zeros([mb_num] + shape[1:]) for src, shape in zip(in_arrays, self.input_shapes)]
-            mb_out = tf.get_default_session().run(out_expr, dict(zip(in_expr, mb_in)))
+            mb_out = tf.compat.v1.get_default_session().run(out_expr, dict(zip(in_expr, mb_in)))
 
             for dst, src in zip(out_arrays, mb_out):
                 dst[mb_begin: mb_end] = src
@@ -462,7 +464,7 @@ class Network:
     def list_ops(self) -> List[TfExpression]:
         include_prefix = self.scope + "/"
         exclude_prefix = include_prefix + "_"
-        ops = tf.get_default_graph().get_operations()
+        ops = tf.compat.v1.get_default_graph().get_operations()
         ops = [op for op in ops if op.name.startswith(include_prefix)]
         ops = [op for op in ops if not op.name.startswith(exclude_prefix)]
         return ops
