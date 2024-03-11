@@ -58,7 +58,7 @@ def _construct_scale(x, scale_lo, scale_init, float_dtype, var_suffix=''):
   else:
     # Otherwise we construct a "latent" scale variable and define `scale`
     # As an affine function of a softplus on that latent variable.
-    latent_scale = tf.get_variable(
+    latent_scale = tf.compat.v1.get_variable(
         'LatentScale' + var_suffix, initializer=tf.zeros((1, x.shape[1]), float_dtype))
     scale = util.affine_softplus(latent_scale, lo=scale_lo, ref=scale_init)
   return scale
@@ -177,7 +177,7 @@ def lossfun(x,
         alpha_init = (alpha_lo + alpha_hi) / 2.
       latent_alpha_init = util.inv_affine_sigmoid(
           alpha_init, lo=alpha_lo, hi=alpha_hi)
-      latent_alpha = tf.get_variable(
+      latent_alpha = tf.compat.v1.get_variable(
           'LatentAlpha' + var_suffix,
           initializer=tf.fill((1, x.shape[1]),
                               tf.cast(latent_alpha_init, dtype=float_dtype)))
@@ -234,7 +234,7 @@ def lossfun_students(x, scale_lo=1e-5, scale_init=1., var_suffix=''):
   float_dtype = x.dtype
   assert_ops = [tf.Assert(tf.equal(tf.rank(x), 2), [tf.rank(x)])]
   with tf.control_dependencies(assert_ops):
-    log_df = tf.get_variable(
+    log_df = tf.compat.v1.get_variable(
         name='LogDf', initializer=tf.zeros((1, x.shape[1]), float_dtype))
     scale = _construct_scale(x, scale_lo, scale_init, float_dtype, var_suffix=var_suffix)
     loss = util.students_t_nll(x, tf.math.exp(log_df), scale)
@@ -343,7 +343,7 @@ def image_lossfun(x,
     #   (num_batches, width, height, num_channels) to
     #   (num_batches * num_channels, width, height)
     _, width, height, num_channels = x.shape.as_list()
-    x_stack = tf.reshape(tf.transpose(x, (0, 3, 1, 2)), (-1, width, height))
+    x_stack = tf.reshape(tf.transpose(a=x, perm=(0, 3, 1, 2)), (-1, width, height))
 
     # Turn each channel in `x_stack` into the spatial representation specified
     # by `representation`.
@@ -361,8 +361,8 @@ def image_lossfun(x,
     #   (num_batches, num_channels * width * height)
     x_mat = tf.reshape(
         tf.transpose(
-            tf.reshape(x_stack, [-1, num_channels, width, height]),
-            [0, 2, 3, 1]), [-1, width * height * num_channels])
+            a=tf.reshape(x_stack, [-1, num_channels, width, height]),
+            perm=[0, 2, 3, 1]), [-1, width * height * num_channels])
 
     # Set up the adaptive loss. Note, if `use_students_t` == True then
     # `alpha_mat` actually contains "log(df)" values.
@@ -382,18 +382,18 @@ def image_lossfun(x,
       # Note that these may look unintuitive unless the colorspace is 'RGB' and
       # the image representation is 'PIXEL', as the image summaries (like most
       # images) are rendered as RGB pixels.
-      alpha_min = tf.reduce_min(alpha)
-      alpha_max = tf.reduce_max(alpha)
-      tf.summary.image(
+      alpha_min = tf.reduce_min(input_tensor=alpha)
+      alpha_max = tf.reduce_max(input_tensor=alpha)
+      tf.compat.v1.summary.image(
           'robust/alpha',
           (alpha[tf.newaxis] - alpha_min) / (alpha_max - alpha_min + 1e-10))
-      tf.summary.histogram('robust/alpha', alpha)
+      tf.compat.v1.summary.histogram('robust/alpha', alpha)
       log_scale = tf.math.log(scale)
-      log_scale_min = tf.reduce_min(log_scale)
-      log_scale_max = tf.reduce_max(log_scale)
-      tf.summary.image('robust/log_scale',
+      log_scale_min = tf.reduce_min(input_tensor=log_scale)
+      log_scale_max = tf.reduce_max(input_tensor=log_scale)
+      tf.compat.v1.summary.image('robust/log_scale',
                        (log_scale[tf.newaxis] - log_scale_min) /
                        (log_scale_max - log_scale_min + 1e-10))
-      tf.summary.histogram('robust/log_scale', log_scale)
+      tf.compat.v1.summary.histogram('robust/log_scale', log_scale)
 
     return loss, alpha, scale
