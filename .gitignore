@@ -8,7 +8,7 @@ generated_images/
 latent_representations/
 masks/
 out/
-raw_images/
+
 .stylegan2-cache/
 
 dnnlib/tflib/_cudacache/
