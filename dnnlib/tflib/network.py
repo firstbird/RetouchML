@@ -14,6 +14,10 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+sys.path.append("training")
+
+from training import networks_stylegan2
+
 from collections import OrderedDict
 from typing import Any, List, Tuple, Union
 
@@ -86,7 +90,8 @@ class Network:
         if util.is_top_level_function(func_name):
             func_name = util.get_top_level_function_name(func_name)
         module, self._build_func_name = util.get_module_from_obj_name(func_name)
-        self._build_func = util.get_obj_from_module(module, self._build_func_name)
+        #self._build_func = util.get_obj_from_module(module, self._build_func_name)
+        self._build_func = networks_stylegan2.G_synthesis_stylegan2
         assert callable(self._build_func)
 
         # Dig up source code for the module containing the build function.
