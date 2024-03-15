@@ -140,9 +140,9 @@ class PerceptualModel:
         generated_image = tf.image.resize_nearest_neighbor(generated_image_tensor,
                                                                   (self.img_size, self.img_size), align_corners=True)
 
-        self.ref_img = tf.get_variable('ref_img', shape=generated_image.shape,
+        self.ref_img = tf.compat.v1('ref_img', shape=generated_image.shape,
                                                 dtype='float32', initializer=tf.initializers.zeros())
-        self.ref_weight = tf.get_variable('ref_weight', shape=generated_image.shape,
+        self.ref_weight = tf.compat.v1('ref_weight', shape=generated_image.shape,
                                                dtype='float32', initializer=tf.initializers.zeros())
         self.add_placeholder("ref_img")
         self.add_placeholder("ref_weight")
@@ -151,9 +151,9 @@ class PerceptualModel:
             vgg16 = VGG16(include_top=False, input_shape=(self.img_size, self.img_size, 3))
             self.perceptual_model = Model(vgg16.input, vgg16.layers[self.layer].output)
             generated_img_features = self.perceptual_model(preprocess_input(self.ref_weight * generated_image))
-            self.ref_img_features = tf.get_variable('ref_img_features', shape=generated_img_features.shape,
+            self.ref_img_features = tf.compat.v1('ref_img_features', shape=generated_img_features.shape,
                                                 dtype='float32', initializer=tf.initializers.zeros())
-            self.features_weight = tf.get_variable('features_weight', shape=generated_img_features.shape,
+            self.features_weight = tf.compat.v1('features_weight', shape=generated_img_features.shape,
                                                dtype='float32', initializer=tf.initializers.zeros())
             self.sess.run([self.features_weight.initializer, self.features_weight.initializer])
             self.add_placeholder("ref_img_features")

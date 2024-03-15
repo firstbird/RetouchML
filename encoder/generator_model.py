@@ -11,13 +11,13 @@ def create_stub(name, batch_size):
 
 def create_variable_for_generator(name, batch_size, tiled_dlatent, model_scale=18, tile_size = 1):
     if tiled_dlatent:
-        low_dim_dlatent = tf.get_variable('learnable_dlatents',
+        low_dim_dlatent = tf.compat.v1('learnable_dlatents',
             shape=(batch_size, tile_size, 512),
             dtype='float32',
             initializer=tf.initializers.random_normal())
         return tf.tile(low_dim_dlatent, [1, model_scale // tile_size, 1])
     else:
-        return tf.get_variable('learnable_dlatents',
+        return tf.compat.v1('learnable_dlatents',
             shape=(batch_size, model_scale, 512),
             dtype='float32',
             initializer=tf.initializers.random_normal())
