@@ -457,7 +457,7 @@ def G_synthesis_stylegan2(
         res = (layer_idx + 5) // 2
         shape = [1, 1, 2**res, 2**res]
         #tf.Variable('noise%d' % layer_idx
-        noise_inputs.append(tf.Variable([[0], [0], [0, 0, 0, 0], [0, 0, 0, 0]], shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
+        noise_inputs.append(tf.Variable(tf.random.normal(shape=shape), shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
     #@tf.compat.v1.keras.utils.track_tf1_style_variables
