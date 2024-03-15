@@ -18,7 +18,7 @@ from dnnlib.tflib.ops.fused_bias_act import fused_bias_act
 
 #----------------------------------------------------------------------------
 # Get/create weight tensor for a convolution or fully-connected layer.
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def get_weight(shape, gain=1, use_wscale=True, lrmul=1, weight_var='weight'):
     fan_in = np.prod(shape[:-1]) # [kernel, kernel, fmaps_in, fmaps_out] or [in, out]
     he_std = gain / np.sqrt(fan_in) # He init
@@ -62,7 +62,7 @@ def conv2d_layer(x, fmaps, kernel, up=False, down=False, resample_kernel=None, g
 
 #----------------------------------------------------------------------------
 # Apply bias and activation func.
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def apply_bias_act(x, act='linear', alpha=None, gain=None, lrmul=1, bias_var='bias'):
     b = tf.compat.v1.get_variable(bias_var, shape=[x.shape[1]], initializer=tf.initializers.zeros()) * lrmul
     return fused_bias_act(x, b=tf.cast(b, x.dtype), act=act, alpha=alpha, gain=gain)
@@ -71,14 +71,14 @@ def apply_bias_act(x, act='linear', alpha=None, gain=None, lrmul=1, bias_var='bi
 # Naive upsampling (nearest neighbor) and downsampling (average pooling).
 
 def naive_upsample_2d(x, factor=2):
-    with tf.compat.v1.get_variable_scope('NaiveUpsample'):
+    with tf.compat.v1.variable_scope('NaiveUpsample'):
         _N, C, H, W = x.shape.as_list()
         x = tf.reshape(x, [-1, C, H, 1, W, 1])
         x = tf.tile(x, [1, 1, 1, factor, 1, factor])
         return tf.reshape(x, [-1, C, H * factor, W * factor])
 
 def naive_downsample_2d(x, factor=2):
-    with tf.compat.v1.get_variable_scope('NaiveDownsample'):
+    with tf.compat.v1.variable_scope('NaiveDownsample'):
         _N, C, H, W = x.shape.as_list()
         x = tf.reshape(x, [-1, C, H // factor, factor, W // factor, factor])
         return tf.reduce_mean(x, axis=[3,5])
@@ -147,7 +147,7 @@ def minibatch_stddev_layer(x, group_size=4, num_new_features=1):
 # Main generator network.
 # Composed of two sub-networks (mapping and synthesis) that are defined below.
 # Used in configs B-F (Table 1).
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_main(
     latents_in,                                         # First input: Latent vectors (Z) [minibatch, latent_size].
     labels_in,                                          # Second input: Conditioning labels [minibatch, label_size].
@@ -201,7 +201,7 @@ def G_main(
 
     # Update moving average of W.
     if dlatent_avg_beta is not None:
-        with tf.compat.v1.get_variable_scope('DlatentAvg'):
+        with tf.compat.v1.variable_scope('DlatentAvg'):
             batch_avg = tf.reduce_mean(dlatents[:, 0], axis=0)
             update_op = tf.assign(dlatent_avg, tflib.lerp(batch_avg, dlatent_avg, dlatent_avg_beta))
             with tf.control_dependencies([update_op]):
@@ -209,7 +209,7 @@ def G_main(
 
     # Perform style mixing regularization.
     if style_mixing_prob is not None:
-        with tf.compat.v1.get_variable_scope('StyleMix'):
+        with tf.compat.v1.variable_scope('StyleMix'):
             latents2 = tf.random_normal(tf.shape(latents_in))
             dlatents2 = components.mapping.get_output_for(latents2, labels_in, is_training=is_training, **kwargs)
             dlatents2 = tf.cast(dlatents2, tf.float32)
@@ -223,7 +223,7 @@ def G_main(
 
     # Apply truncation trick.
     if truncation_psi is not None:
-        with tf.compat.v1.get_variable_scope('Truncation'):
+        with tf.compat.v1.variable_scope('Truncation'):
             layer_idx = np.arange(num_layers)[np.newaxis, :, np.newaxis]
             layer_psi = np.ones(layer_idx.shape, dtype=np.float32)
             if truncation_cutoff is None:
@@ -249,7 +249,7 @@ def G_main(
 # Mapping network.
 # Transforms the input latent code (z) to the disentangled latent code (w).
 # Used in configs B-F (Table 1).
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_mapping(
     latents_in,                             # First input: Latent vectors (Z) [minibatch, latent_size].
     labels_in,                              # Second input: Conditioning labels [minibatch, label_size].
@@ -278,25 +278,25 @@ def G_mapping(
 
     # Embed labels and concatenate them with latents.
     if label_size:
-        with tf.compat.v1.get_variable_scope('LabelConcat'):
+        with tf.compat.v1.variable_scope('LabelConcat'):
             w = tf.compat.v1.get_variable('weight', shape=[label_size, latent_size], initializer=tf.initializers.random_normal())
             y = tf.matmul(labels_in, tf.cast(w, dtype))
             x = tf.concat([x, y], axis=1)
 
     # Normalize latents.
     if normalize_latents:
-        with tf.compat.v1.get_variable_scope('Normalize'):
+        with tf.compat.v1.variable_scope('Normalize'):
             x *= tf.rsqrt(tf.reduce_mean(tf.square(x), axis=1, keepdims=True) + 1e-8)
 
     # Mapping layers.
     for layer_idx in range(mapping_layers):
-        with tf.compat.v1.get_variable_scope('Dense%d' % layer_idx):
+        with tf.compat.v1.variable_scope('Dense%d' % layer_idx):
             fmaps = dlatent_size if layer_idx == mapping_layers - 1 else mapping_fmaps
             x = apply_bias_act(dense_layer(x, fmaps=fmaps, lrmul=mapping_lrmul), act=act, lrmul=mapping_lrmul)
 
     # Broadcast.
     if dlatent_broadcast is not None:
-        with tf.compat.v1.get_variable_scope('Broadcast'):
+        with tf.compat.v1.variable_scope('Broadcast'):
             x = tf.tile(x[:, np.newaxis], [1, dlatent_broadcast, 1])
 
     # Output.
@@ -307,7 +307,7 @@ def G_mapping(
 # StyleGAN synthesis network with revised architecture (Figure 2d).
 # Implements progressive growing, but no skip connections or residual nets (Figure 7).
 # Used in configs B-D (Table 1).
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_synthesis_stylegan_revised(
     dlatents_in,                        # Input: Disentangled latents (W) [minibatch, num_layers, dlatent_size].
     dlatent_size        = 512,          # Disentangled latent (W) dimensionality.
@@ -352,6 +352,7 @@ def G_synthesis_stylegan_revised(
         noise_inputs.append(tf.compat.v1.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
+    @tf.compat.v1.keras.utils.track_tf1_style_variables
     def layer(x, layer_idx, fmaps, kernel, up=False):
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
@@ -363,23 +364,23 @@ def G_synthesis_stylegan_revised(
         return apply_bias_act(x, act=act)
 
     # Early layers.
-    with tf.compat.v1.get_variable_scope('4x4'):
-        with tf.compat.v1.get_variable_scope('Const'):
+    with tf.compat.v1.variable_scope('4x4'):
+        with tf.compat.v1.variable_scope('Const'):
             x = tf.compat.v1.get_variable('const', shape=[1, nf(1), 4, 4], initializer=tf.initializers.random_normal())
             x = tf.tile(tf.cast(x, dtype), [tf.shape(dlatents_in)[0], 1, 1, 1])
-        with tf.compat.v1.get_variable_scope('Conv'):
+        with tf.compat.v1.variable_scope('Conv'):
             x = layer(x, layer_idx=0, fmaps=nf(1), kernel=3)
 
     # Building blocks for remaining layers.
     def block(res, x): # res = 3..resolution_log2
-        with tf.compat.v1.get_variable_scope('%dx%d' % (2**res, 2**res)):
-            with tf.compat.v1.get_variable_scope('Conv0_up'):
+        with tf.compat.v1.variable_scope('%dx%d' % (2**res, 2**res)):
+            with tf.compat.v1.variable_scope('Conv0_up'):
                 x = layer(x, layer_idx=res*2-5, fmaps=nf(res-1), kernel=3, up=True)
-            with tf.compat.v1.get_variable_scope('Conv1'):
+            with tf.compat.v1.variable_scope('Conv1'):
                 x = layer(x, layer_idx=res*2-4, fmaps=nf(res-1), kernel=3)
             return x
     def torgb(res, x): # res = 2..resolution_log2
-        with tf.compat.v1.get_variable_scope('ToRGB_lod%d' % (resolution_log2 - res)):
+        with tf.compat.v1.variable_scope('ToRGB_lod%d' % (resolution_log2 - res)):
             return apply_bias_act(modulated_conv2d_layer(x, dlatents_in[:, res*2-3], fmaps=num_channels, kernel=1, demodulate=False, fused_modconv=fused_modconv))
 
     # Fixed structure: simple and efficient, but does not support progressive growing.
@@ -395,9 +396,9 @@ def G_synthesis_stylegan_revised(
             lod = resolution_log2 - res
             x = block(res, x)
             img = torgb(res, x)
-            with tf.compat.v1.get_variable_scope('Upsample_lod%d' % lod):
+            with tf.compat.v1.variable_scope('Upsample_lod%d' % lod):
                 images_out = upsample_2d(images_out)
-            with tf.compat.v1.get_variable_scope('Grow_lod%d' % lod):
+            with tf.compat.v1.variable_scope('Grow_lod%d' % lod):
                 images_out = tflib.lerp_clip(img, images_out, lod_in - lod)
 
     # Recursive structure: complex but efficient.
@@ -419,7 +420,7 @@ def G_synthesis_stylegan_revised(
 # StyleGAN2 synthesis network (Figure 7).
 # Implements skip connections and residual nets (Figure 7), but no progressive growing.
 # Used in configs E-F (Table 1).
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_synthesis_stylegan2(
     dlatents_in,                        # Input: Disentangled latents (W) [minibatch, num_layers, dlatent_size].
     dlatent_size        = 512,          # Disentangled latent (W) dimensionality.
@@ -458,6 +459,7 @@ def G_synthesis_stylegan2(
         noise_inputs.append(tf.compat.v1.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
+    @tf.compat.v1.keras.utils.track_tf1_style_variables
     def layer(x, layer_idx, fmaps, kernel, up=False):
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
@@ -471,37 +473,37 @@ def G_synthesis_stylegan2(
     # Building blocks for main layers.
     def block(x, res): # res = 3..resolution_log2
         t = x
-        with tf.compat.v1.get_variable_scope('Conv0_up'):
+        with tf.compat.v1.variable_scope('Conv0_up'):
             x = layer(x, layer_idx=res*2-5, fmaps=nf(res-1), kernel=3, up=True)
-        with tf.compat.v1.get_variable_scope('Conv1'):
+        with tf.compat.v1.variable_scope('Conv1'):
             x = layer(x, layer_idx=res*2-4, fmaps=nf(res-1), kernel=3)
         if architecture == 'resnet':
-            with tf.compat.v1.get_variable_scope('Skip'):
+            with tf.compat.v1.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(res-1), kernel=1, up=True, resample_kernel=resample_kernel)
                 x = (x + t) * (1 / np.sqrt(2))
         return x
     def upsample(y):
-        with tf.compat.v1.get_variable_scope('Upsample'):
+        with tf.compat.v1.variable_scope('Upsample'):
             return upsample_2d(y, k=resample_kernel)
     def torgb(x, y, res): # res = 2..resolution_log2
-        with tf.compat.v1.get_variable_scope('ToRGB'):
+        with tf.compat.v1.variable_scope('ToRGB'):
             t = apply_bias_act(modulated_conv2d_layer(x, dlatents_in[:, res*2-3], fmaps=num_channels, kernel=1, demodulate=False, fused_modconv=fused_modconv))
             return t if y is None else y + t
 
     # Early layers.
     y = None
-    with tf.compat.v1.get_variable_scope('4x4'):
-        with tf.compat.v1.get_variable_scope('Const'):
+    with tf.compat.v1.variable_scope('4x4'):
+        with tf.compat.v1.variable_scope('Const'):
             x = tf.compat.v1.get_variable('const', shape=[1, nf(1), 4, 4], initializer=tf.initializers.random_normal())
             x = tf.tile(tf.cast(x, dtype), [tf.shape(dlatents_in)[0], 1, 1, 1])
-        with tf.compat.v1.get_variable_scope('Conv'):
+        with tf.compat.v1.variable_scope('Conv'):
             x = layer(x, layer_idx=0, fmaps=nf(1), kernel=3)
         if architecture == 'skip':
             y = torgb(x, y, 2)
 
     # Main layers.
     for res in range(3, resolution_log2 + 1):
-        with tf.compat.v1.get_variable_scope('%dx%d' % (2**res, 2**res)):
+        with tf.compat.v1.variable_scope('%dx%d' % (2**res, 2**res)):
             x = block(x, res)
             if architecture == 'skip':
                 y = upsample(y)
@@ -515,7 +517,7 @@ def G_synthesis_stylegan2(
 #----------------------------------------------------------------------------
 # Original StyleGAN discriminator.
 # Used in configs B-D (Table 1).
-
+@tf.compat.v1.keras.utils.track_tf1_style_variables
 def D_stylegan(
     images_in,                          # First input: Images [minibatch, channel, height, width].
     labels_in,                          # Second input: Labels [minibatch, label_size].
@@ -550,13 +552,13 @@ def D_stylegan(
 
     # Building blocks for spatial layers.
     def fromrgb(x, res): # res = 2..resolution_log2
-        with tf.compat.v1.get_variable_scope('FromRGB_lod%d' % (resolution_log2 - res)):
+        with tf.compat.v1.variable_scope('FromRGB_lod%d' % (resolution_log2 - res)):
             return apply_bias_act(conv2d_layer(x, fmaps=nf(res-1), kernel=1), act=act)
     def block(x, res): # res = 2..resolution_log2
-        with tf.compat.v1.get_variable_scope('%dx%d' % (2**res, 2**res)):
-            with tf.compat.v1.get_variable_scope('Conv0'):
+        with tf.compat.v1.variable_scope('%dx%d' % (2**res, 2**res)):
+            with tf.compat.v1.variable_scope('Conv0'):
                 x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-1), kernel=3), act=act)
-            with tf.compat.v1.get_variable_scope('Conv1_down'):
+            with tf.compat.v1.variable_scope('Conv1_down'):
                 x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-2), kernel=3, down=True, resample_kernel=resample_kernel), act=act)
             return x
 
@@ -573,10 +575,10 @@ def D_stylegan(
         for res in range(resolution_log2, 2, -1):
             lod = resolution_log2 - res
             x = block(x, res)
-            with tf.compat.v1.get_variable_scope('Downsample_lod%d' % lod):
+            with tf.compat.v1.variable_scope('Downsample_lod%d' % lod):
                 img = downsample_2d(img)
             y = fromrgb(img, res - 1)
-            with tf.compat.v1.get_variable_scope('Grow_lod%d' % lod):
+            with tf.compat.v1.variable_scope('Grow_lod%d' % lod):
                 x = tflib.lerp_clip(x, y, lod_in - lod)
 
     # Recursive structure: complex but efficient.
@@ -592,17 +594,17 @@ def D_stylegan(
         x = grow(3, resolution_log2 - 3)
 
     # Final layers at 4x4 resolution.
-    with tf.compat.v1.get_variable_scope('4x4'):
+    with tf.compat.v1.variable_scope('4x4'):
         if mbstd_group_size > 1:
-            with tf.compat.v1.get_variable_scope('MinibatchStddev'):
+            with tf.compat.v1.variable_scope('MinibatchStddev'):
                 x = minibatch_stddev_layer(x, mbstd_group_size, mbstd_num_features)
-        with tf.compat.v1.get_variable_scope('Conv'):
+        with tf.compat.v1.variable_scope('Conv'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(1), kernel=3), act=act)
-        with tf.compat.v1.get_variable_scope('Dense0'):
+        with tf.compat.v1.variable_scope('Dense0'):
             x = apply_bias_act(dense_layer(x, fmaps=nf(0)), act=act)
 
     # Output layer with label conditioning from "Which Training Methods for GANs do actually Converge?"
-    with tf.compat.v1.get_variable_scope('Output'):
+    with tf.compat.v1.variable_scope('Output'):
         x = apply_bias_act(dense_layer(x, fmaps=max(labels_in.shape[1], 1)))
         if labels_in.shape[1] > 0:
             x = tf.reduce_sum(x * labels_in, axis=1, keepdims=True)
@@ -650,29 +652,29 @@ def D_stylegan2(
 
     # Building blocks for main layers.
     def fromrgb(x, y, res): # res = 2..resolution_log2
-        with tf.compat.v1.get_variable_scope('FromRGB'):
+        with tf.compat.v1.variable_scope('FromRGB'):
             t = apply_bias_act(conv2d_layer(y, fmaps=nf(res-1), kernel=1), act=act)
             return t if x is None else x + t
     def block(x, res): # res = 2..resolution_log2
         t = x
-        with tf.compat.v1.get_variable_scope('Conv0'):
+        with tf.compat.v1.variable_scope('Conv0'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-1), kernel=3), act=act)
-        with tf.compat.v1.get_variable_scope('Conv1_down'):
+        with tf.compat.v1.variable_scope('Conv1_down'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(res-2), kernel=3, down=True, resample_kernel=resample_kernel), act=act)
         if architecture == 'resnet':
-            with tf.compat.v1.get_variable_scope('Skip'):
+            with tf.compat.v1.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(res-2), kernel=1, down=True, resample_kernel=resample_kernel)
                 x = (x + t) * (1 / np.sqrt(2))
         return x
     def downsample(y):
-        with tf.compat.v1.get_variable_scope('Downsample'):
+        with tf.compat.v1.variable_scope('Downsample'):
             return downsample_2d(y, k=resample_kernel)
 
     # Main layers.
     x = None
     y = images_in
     for res in range(resolution_log2, 2, -1):
-        with tf.compat.v1.get_variable_scope('%dx%d' % (2**res, 2**res)):
+        with tf.compat.v1.variable_scope('%dx%d' % (2**res, 2**res)):
             if architecture == 'skip' or res == resolution_log2:
                 x = fromrgb(x, y, res)
             x = block(x, res)
@@ -680,19 +682,19 @@ def D_stylegan2(
                 y = downsample(y)
 
     # Final layers.
-    with tf.compat.v1.get_variable_scope('4x4'):
+    with tf.compat.v1.variable_scope('4x4'):
         if architecture == 'skip':
             x = fromrgb(x, y, 2)
         if mbstd_group_size > 1:
-            with tf.compat.v1.get_variable_scope('MinibatchStddev'):
+            with tf.compat.v1.variable_scope('MinibatchStddev'):
                 x = minibatch_stddev_layer(x, mbstd_group_size, mbstd_num_features)
-        with tf.compat.v1.get_variable_scope('Conv'):
+        with tf.compat.v1.variable_scope('Conv'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(1), kernel=3), act=act)
-        with tf.compat.v1.get_variable_scope('Dense0'):
+        with tf.compat.v1.variable_scope('Dense0'):
             x = apply_bias_act(dense_layer(x, fmaps=nf(0)), act=act)
 
     # Output layer with label conditioning from "Which Training Methods for GANs do actually Converge?"
-    with tf.compat.v1.get_variable_scope('Output'):
+    with tf.compat.v1.variable_scope('Output'):
         x = apply_bias_act(dense_layer(x, fmaps=max(labels_in.shape[1], 1)))
         if labels_in.shape[1] > 0:
             x = tf.reduce_sum(x * labels_in, axis=1, keepdims=True)
