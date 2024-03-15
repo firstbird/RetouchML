@@ -91,7 +91,7 @@ def modulated_conv2d_layer(x, y, fmaps, kernel, up=False, down=False, demodulate
     assert kernel >= 1 and kernel % 2 == 1
 
     # Get weight.
-    w = get_weight([kernel, kernel, x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
+    w = get_weight([kernel, kernel, x.shape[1] if isinstance(x.shape[1], int) else x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
     ww = w[np.newaxis] # [BkkIO] Introduce minibatch dimension.
 
     # Modulate.
