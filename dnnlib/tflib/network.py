@@ -16,7 +16,7 @@ import tensorflow as tf
 
 sys.path.append("training")
 
-from training import networks_stylegan2
+from training import networks_stylegan
 
 from collections import OrderedDict
 from typing import Any, List, Tuple, Union
@@ -92,7 +92,7 @@ class Network:
         module, self._build_func_name = util.get_module_from_obj_name(func_name)
         print(f"__init__ module: {module}, func_name: {self._build_func_name}")
         #self._build_func = util.get_obj_from_module(module, self._build_func_name)
-        self._build_func = networks_stylegan2.G_synthesis_stylegan2
+        self._build_func = networks_stylegan.G_synthesis
         assert callable(self._build_func)
 
         # Dig up source code for the module containing the build function.
@@ -303,7 +303,7 @@ class Network:
         # Locate network build function in the temporary module.
         #self._build_func = util.get_obj_from_module(module, self._build_func_name)
         print(f"__setstate__ module: {module}, func_name: {self._build_func_name}")
-        self._build_func = networks_stylegan2.G_synthesis_stylegan2
+        self._build_func = networks_stylegan.G_synthesis
         assert callable(self._build_func)
 
         # Init TensorFlow graph.
