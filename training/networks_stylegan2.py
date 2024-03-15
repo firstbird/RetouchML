@@ -18,7 +18,7 @@ from dnnlib.tflib.ops.fused_bias_act import fused_bias_act
 
 #----------------------------------------------------------------------------
 # Get/create weight tensor for a convolution or fully-connected layer.
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def get_weight(shape, gain=1, use_wscale=True, lrmul=1, weight_var='weight'):
     fan_in = np.prod(shape[:-1]) # [kernel, kernel, fmaps_in, fmaps_out] or [in, out]
     he_std = gain / np.sqrt(fan_in) # He init
@@ -62,7 +62,7 @@ def conv2d_layer(x, fmaps, kernel, up=False, down=False, resample_kernel=None, g
 
 #----------------------------------------------------------------------------
 # Apply bias and activation func.
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def apply_bias_act(x, act='linear', alpha=None, gain=None, lrmul=1, bias_var='bias'):
     b = tf.Variable(bias_var, shape=[x.shape[1]], initializer=tf.initializers.zeros()) * lrmul
     return fused_bias_act(x, b=tf.cast(b, x.dtype), act=act, alpha=alpha, gain=gain)
@@ -147,7 +147,7 @@ def minibatch_stddev_layer(x, group_size=4, num_new_features=1):
 # Main generator network.
 # Composed of two sub-networks (mapping and synthesis) that are defined below.
 # Used in configs B-F (Table 1).
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_main(
     latents_in,                                         # First input: Latent vectors (Z) [minibatch, latent_size].
     labels_in,                                          # Second input: Conditioning labels [minibatch, label_size].
@@ -249,7 +249,7 @@ def G_main(
 # Mapping network.
 # Transforms the input latent code (z) to the disentangled latent code (w).
 # Used in configs B-F (Table 1).
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_mapping(
     latents_in,                             # First input: Latent vectors (Z) [minibatch, latent_size].
     labels_in,                              # Second input: Conditioning labels [minibatch, label_size].
@@ -307,7 +307,7 @@ def G_mapping(
 # StyleGAN synthesis network with revised architecture (Figure 2d).
 # Implements progressive growing, but no skip connections or residual nets (Figure 7).
 # Used in configs B-D (Table 1).
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_synthesis_stylegan_revised(
     dlatents_in,                        # Input: Disentangled latents (W) [minibatch, num_layers, dlatent_size].
     dlatent_size        = 512,          # Disentangled latent (W) dimensionality.
@@ -352,7 +352,7 @@ def G_synthesis_stylegan_revised(
         noise_inputs.append(tf.Variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
-    @tf.compat.v1.keras.utils.track_tf1_style_variables
+    #@tf.compat.v1.keras.utils.track_tf1_style_variables
     def layer(x, layer_idx, fmaps, kernel, up=False):
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
@@ -420,7 +420,7 @@ def G_synthesis_stylegan_revised(
 # StyleGAN2 synthesis network (Figure 7).
 # Implements skip connections and residual nets (Figure 7), but no progressive growing.
 # Used in configs E-F (Table 1).
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def G_synthesis_stylegan2(
     dlatents_in,                        # Input: Disentangled latents (W) [minibatch, num_layers, dlatent_size].
     dlatent_size        = 512,          # Disentangled latent (W) dimensionality.
@@ -459,7 +459,7 @@ def G_synthesis_stylegan2(
         noise_inputs.append(tf.Variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
-    @tf.compat.v1.keras.utils.track_tf1_style_variables
+    #@tf.compat.v1.keras.utils.track_tf1_style_variables
     def layer(x, layer_idx, fmaps, kernel, up=False):
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
@@ -517,7 +517,7 @@ def G_synthesis_stylegan2(
 #----------------------------------------------------------------------------
 # Original StyleGAN discriminator.
 # Used in configs B-D (Table 1).
-@tf.compat.v1.keras.utils.track_tf1_style_variables
+#@tf.compat.v1.keras.utils.track_tf1_style_variables
 def D_stylegan(
     images_in,                          # First input: Images [minibatch, channel, height, width].
     labels_in,                          # Second input: Labels [minibatch, label_size].
