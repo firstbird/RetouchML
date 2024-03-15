@@ -171,7 +171,7 @@ def G_logistic_ns_pathreg(G, D, opt, training_set, minibatch_size, pl_minibatch_
 
         # Track exponential moving average of |J*y|.
         with tf.control_dependencies(None):
-            pl_mean_var = tf.Variable(name='pl_mean', trainable=False, initial_value=0.0, dtype=tf.float32)
+            pl_mean_var = tf.compat.v1.get_variable(name='pl_mean', trainable=False, initial_value=0.0, dtype=tf.float32)
         pl_mean = pl_mean_var + pl_decay * (tf.reduce_mean(pl_lengths) - pl_mean_var)
         pl_update = tf.assign(pl_mean_var, pl_mean)
 

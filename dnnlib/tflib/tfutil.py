@@ -18,7 +18,7 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 from typing import Any, Iterable, List, Union
 
-TfExpression = Union[tf.Tensor, tf.Variable, tf.Operation]
+TfExpression = Union[tf.Tensor, tf.compat.v1.get_variable, tf.Operation]
 """A type that represents a valid Tensorflow expression."""
 
 TfExpressionEx = Union[TfExpression, int, float, np.ndarray]
@@ -33,7 +33,7 @@ def run(*args, **kwargs) -> Any:
 
 def is_tf_expression(x: Any) -> bool:
     """Check whether the input is a valid Tensorflow expression, i.e., Tensorflow Tensor, Variable, or Operation."""
-    return isinstance(x, (tf.Tensor, tf.Variable, tf.Operation))
+    return isinstance(x, (tf.Tensor, tf.compat.v1.get_variable, tf.Operation))
 
 
 def shape_to_list(shape: Iterable[tf.compat.v1.Dimension]) -> List[Union[int, None]]:
@@ -161,7 +161,7 @@ def create_session(config_dict: dict = None, force_as_default: bool = False) -> 
     return session
 
 
-def init_uninitialized_vars(target_vars: List[tf.Variable] = None) -> None:
+def init_uninitialized_vars(target_vars: List[tf.compat.v1.get_variable] = None) -> None:
     """Initialize all tf.Variables that have not already been initialized.
 
     Equivalent to the following, but more efficient and does not bloat the tf graph:
@@ -218,11 +218,11 @@ def set_vars(var_to_value_dict: dict) -> None:
 
 
 def create_var_with_large_initial_value(initial_value: np.ndarray, *args, **kwargs):
-    """Create tf.Variable with large initial value without bloating the tf graph."""
+    """Create tf.compat.v1.get_variable with large initial value without bloating the tf graph."""
     assert_tf_initialized()
     assert isinstance(initial_value, np.ndarray)
     zeros = tf.zeros(initial_value.shape, initial_value.dtype)
-    var = tf.Variable(zeros, *args, **kwargs)
+    var = tf.compat.v1.get_variable(zeros, *args, **kwargs)
     set_vars({var: initial_value})
     return var
 

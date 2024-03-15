@@ -19,7 +19,7 @@ from training import misc
 
 def batch_pairwise_distances(U, V):
     """ Compute pairwise distances between two batches of feature vectors."""
-    with tf.variable_scope('pairwise_dist_block'):
+    with tf.compat.v1.variable_scope('pairwise_dist_block'):
         # Squared norms of each row in U and V.
         norm_u = tf.reduce_sum(tf.square(U), 1)
         norm_v = tf.reduce_sum(tf.square(V), 1)

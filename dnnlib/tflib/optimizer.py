@@ -91,11 +91,11 @@ class Optimizer:
         device = util.EasyDict()
         device.name             = device_name
         device.optimizer        = None          # Underlying optimizer:     optimizer_class
-        device.loss_scaling_var = None          # Log2 of loss scaling:     tf.Variable
+        device.loss_scaling_var = None          # Log2 of loss scaling:     tf.compat.v1.get_variable
         device.grad_raw         = OrderedDict() # Raw gradients:            var => [grad, ...]
         device.grad_clean       = OrderedDict() # Clean gradients:          var => grad
-        device.grad_acc_vars    = OrderedDict() # Accumulation sums:        var => tf.Variable
-        device.grad_acc_count   = None          # Accumulation counter:     tf.Variable
+        device.grad_acc_vars    = OrderedDict() # Accumulation sums:        var => tf.compat.v1.get_variable
+        device.grad_acc_count   = None          # Accumulation counter:     tf.compat.v1.get_variable
         device.grad_acc         = OrderedDict() # Accumulated gradients:    var => grad
 
         # Setup TensorFlow objects.
@@ -105,7 +105,7 @@ class Optimizer:
                 self._shared_optimizers[device_name] = self.optimizer_class(name=optimizer_name, learning_rate=self.learning_rate, **self.optimizer_kwargs)
             device.optimizer = self._shared_optimizers[device_name]
             if self.use_loss_scaling:
-                device.loss_scaling_var = tf.Variable(np.float32(self.loss_scaling_init), trainable=False, name="loss_scaling_var")
+                device.loss_scaling_var = tf.compat.v1.get_variable(np.float32(self.loss_scaling_init), trainable=False, name="loss_scaling_var")
 
         # Register device.
         self._devices[device_name] = device
@@ -214,8 +214,8 @@ class Optimizer:
                     # Create variables.
                     with tf.control_dependencies(None):
                         for var in device.grad_clean.keys():
-                            device.grad_acc_vars[var] = tf.Variable(tf.zeros(var.shape), trainable=False, name="grad_acc_var")
-                        device.grad_acc_count = tf.Variable(tf.zeros([]), trainable=False, name="grad_acc_count")
+                            device.grad_acc_vars[var] = tf.compat.v1.get_variable(tf.zeros(var.shape), trainable=False, name="grad_acc_var")
+                        device.grad_acc_count = tf.compat.v1.get_variable(tf.zeros([]), trainable=False, name="grad_acc_count")
 
                     # Track counter.
                     count_cur = device.grad_acc_count + 1.0
@@ -269,7 +269,7 @@ class Optimizer:
         tfutil.assert_tf_initialized()
         tfutil.run([var.initializer for device in self._devices.values() for var in device.optimizer.variables()])
 
-    def get_loss_scaling_var(self, device: str) -> Union[tf.Variable, None]:
+    def get_loss_scaling_var(self, device: str) -> Union[tf.compat.v1.get_variable, None]:
         """Get or create variable representing log2 of the current dynamic loss scaling factor."""
         return self._get_device(device).loss_scaling_var
 
@@ -314,8 +314,8 @@ class SimpleAdam:
 
             # Adjust learning rate to deal with startup bias.
             with tf.control_dependencies(None):
-                b1pow_var = tf.Variable(dtype=tf.float32, initial_value=1, trainable=False)
-                b2pow_var = tf.Variable(dtype=tf.float32, initial_value=1, trainable=False)
+                b1pow_var = tf.compat.v1.get_variable(dtype=tf.float32, initial_value=1, trainable=False)
+                b2pow_var = tf.compat.v1.get_variable(dtype=tf.float32, initial_value=1, trainable=False)
                 state_vars += [b1pow_var, b2pow_var]
             b1pow_new = b1pow_var * self.beta1
             b2pow_new = b2pow_var * self.beta2
@@ -325,8 +325,8 @@ class SimpleAdam:
             # Construct ops to update each variable.
             for grad, var in grads_and_vars:
                 with tf.control_dependencies(None):
-                    m_var = tf.Variable(dtype=tf.float32, initial_value=tf.zeros_like(var), trainable=False)
-                    v_var = tf.Variable(dtype=tf.float32, initial_value=tf.zeros_like(var), trainable=False)
+                    m_var = tf.compat.v1.get_variable(dtype=tf.float32, initial_value=tf.zeros_like(var), trainable=False)
+                    v_var = tf.compat.v1.get_variable(dtype=tf.float32, initial_value=tf.zeros_like(var), trainable=False)
                     state_vars += [m_var, v_var]
                 m_new = self.beta1 * m_var + (1 - self.beta1) * grad
                 v_new = self.beta2 * v_var + (1 - self.beta2) * tf.square(grad)
