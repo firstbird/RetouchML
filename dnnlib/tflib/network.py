@@ -154,7 +154,7 @@ class Network:
                 self.input_templates = [tf.compat.v1.placeholder(tf.float32, name=name) for name in self.input_names]
                 print(f"build func: {self._build_func}")
                 print(f"input_templates: {self.input_templates}")
-                print(f"input_templates: {self.build_kwargs}")
+                print(f"build_kwargs: {build_kwargs}")
 
                 out_expr = self._build_func(*self.input_templates, **build_kwargs)
 
