@@ -300,7 +300,8 @@ class Network:
         exec(self._build_module_src, module.__dict__) # pylint: disable=exec-used
 
         # Locate network build function in the temporary module.
-        self._build_func = util.get_obj_from_module(module, self._build_func_name)
+        #self._build_func = util.get_obj_from_module(module, self._build_func_name)
+        self._build_func = networks_stylegan2.G_synthesis_stylegan2
         assert callable(self._build_func)
 
         # Init TensorFlow graph.
