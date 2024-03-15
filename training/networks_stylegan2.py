@@ -163,7 +163,7 @@ def G_main(
     is_template_graph       = False,                    # True = template graph constructed by the Network class, False = actual evaluation.
     components              = dnnlib.EasyDict(),        # Container for sub-networks. Retained between calls.
     mapping_func            = 'G_mapping',              # Build func name for the mapping network.
-    synthesis_func          = 'G_synthesis_stylegan2',  # Build func name for the synthesis network.
+    synthesis_func          = 'D_stylegan2',#'G_synthesis_stylegan2',  # Build func name for the synthesis network.
     **kwargs):                                          # Arguments for sub-networks (mapping and synthesis).
 
     print(f"G_main kwargs: {kwargs}")
