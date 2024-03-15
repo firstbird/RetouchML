@@ -166,6 +166,8 @@ def G_main(
     synthesis_func          = 'G_synthesis_stylegan2',  # Build func name for the synthesis network.
     **kwargs):                                          # Arguments for sub-networks (mapping and synthesis).
 
+    print(f"G_main kwargs: {kwargs}")
+
     # Validate arguments.
     assert not is_training or not is_validation
     assert isinstance(components, dnnlib.EasyDict)
@@ -263,6 +265,8 @@ def G_mapping(
     dtype                   = 'float32',    # Data type to use for activations and outputs.
     **_kwargs):                             # Ignore unrecognized keyword args.
 
+    print(f"G_mapping kwargs: {_kwargs}")
+
     act = mapping_nonlinearity
 
     # Inputs.
@@ -322,6 +326,8 @@ def G_synthesis_stylegan_revised(
     is_template_graph   = False,        # True = template graph constructed by the Network class, False = actual evaluation.
     force_clean_graph   = False,        # True = construct a clean graph that looks nice in TensorBoard, False = default behavior.
     **_kwargs):                         # Ignore unrecognized keyword args.
+
+    print(f"G_synthesis_stylegan_revised kwargs: {_kwargs}")
 
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
@@ -529,6 +535,7 @@ def D_stylegan(
     is_template_graph   = False,        # True = template graph constructed by the Network class, False = actual evaluation.
     **_kwargs):                         # Ignore unrecognized keyword args.
 
+    print(f"D_stylegan kwargs: {_kwargs}")
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
     def nf(stage): return np.clip(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_min, fmap_max)
@@ -629,6 +636,7 @@ def D_stylegan2(
     resample_kernel     = [1,3,3,1],    # Low-pass filter to apply when resampling activations. None = no filtering.
     **_kwargs):                         # Ignore unrecognized keyword args.
 
+    print(f"D_stylegan2 kwargs: {_kwargs}")
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
     def nf(stage): return np.clip(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_min, fmap_max)
