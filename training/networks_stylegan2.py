@@ -41,7 +41,7 @@ def get_weight(shape, gain=1, use_wscale=True, lrmul=1, weight_var='weight'):
 def dense_layer(x, fmaps, gain=1, use_wscale=True, lrmul=1, weight_var='weight'):
     if len(x.shape) > 2:
         x = tf.reshape(x, [-1, np.prod([d.value for d in x.shape[1:]])])
-    w = get_weight([x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
+    w = get_weight([x.shape[1] if isinstance(x.shape[1], int) else x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
     w = tf.cast(w, x.dtype)
     return tf.matmul(x, w)
 
@@ -51,7 +51,7 @@ def dense_layer(x, fmaps, gain=1, use_wscale=True, lrmul=1, weight_var='weight')
 def conv2d_layer(x, fmaps, kernel, up=False, down=False, resample_kernel=None, gain=1, use_wscale=True, lrmul=1, weight_var='weight'):
     assert not (up and down)
     assert kernel >= 1 and kernel % 2 == 1
-    w = get_weight([kernel, kernel, x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
+    w = get_weight([kernel, kernel, x.shape[1] if isinstance(x.shape[1], int) else x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
     if up:
         x = upsample_conv_2d(x, tf.cast(w, x.dtype), data_format='NCHW', k=resample_kernel)
     elif down:
